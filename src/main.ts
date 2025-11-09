@@ -25,10 +25,29 @@ export const createNestServer = async (expressInstance: express.Express) => {
 
   // CORS
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      const allowedOrigins = [
+        'http://localhost:3000',
+        'http://localhost:3000/',
+        process.env.FRONTEND_URL,
+      ].filter(Boolean);
+
+      // Allow all Vercel preview and production deployments
+      const isVercelDomain = origin.includes('.vercel.app');
+      const isAllowedOrigin = allowedOrigins.some(allowed => origin.startsWith(allowed));
+
+      if (isVercelDomain || isAllowedOrigin) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
   // Global pipes
