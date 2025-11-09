@@ -89,13 +89,19 @@ export class ResponsesService {
     const snapshot = await this.firebaseService.firestore
       .collection(this.collection)
       .where('surveyId', '==', surveyId)
-      .orderBy('submittedAt', 'desc')
       .get();
 
-    const responses = snapshot.docs.map((doc) => ({
+    let responses = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     }));
+
+    // Sort by submittedAt in memory to avoid index requirement (descending)
+    responses.sort((a: any, b: any) => {
+      const aDate = a.submittedAt?.toDate?.() || a.submittedAt || new Date(0);
+      const bDate = b.submittedAt?.toDate?.() || b.submittedAt || new Date(0);
+      return bDate.getTime() - aDate.getTime();
+    });
 
     // Cache for 2 minutes
     await this.cacheService.set(cacheKey, responses, 120);
